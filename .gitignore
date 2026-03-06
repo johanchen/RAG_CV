@@ -1,0 +1,8 @@
+.streamlit/secrets.toml
+.env
+.env.*
+docs/
+data/
+local_docs/
+uploads/
+rag_cv/

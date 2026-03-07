@@ -3,4 +3,4 @@ supabase==2.13.0
 openai==1.66.3
 litellm==1.63.11
 python-dotenv==1.0.1
-docling==2.24.0
+# docling==2.24.0

@@ -2,5 +2,4 @@ streamlit==1.42.2
 supabase==2.13.0
 openai==1.66.3
 litellm==1.63.11
-docling==2.24.0
 python-dotenv==1.0.1

@@ -1,10 +1,10 @@
 import argparse
 import hashlib
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 import streamlit as st
-from docling.chunking import HierarchicalChunker
+from docling.chunking import HybridChunker
 from docling.document_converter import DocumentConverter
 from openai import OpenAI
 from supabase import Client, create_client
@@ -12,6 +12,8 @@ from supabase import Client, create_client
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md", ".html", ".htm"}
 EMBEDDING_MODEL = "text-embedding-3-small"
+EMBED_BATCH_SIZE = 100
+MIN_CHUNK_LENGTH = 200
 
 
 def load_secret(name: str) -> str:
@@ -53,14 +55,25 @@ def _chunk_text(chunk) -> str:
 
 def _chunk_section(chunk) -> str:
     meta = getattr(chunk, "meta", None)
-    if not meta:
+    if meta is None:
         return "N/A"
 
+    # Docling HierarchicalChunker stores headings as a list (most specific last)
+    headings = getattr(meta, "headings", None)
+    if headings:
+        if isinstance(headings, (list, tuple)) and len(headings) > 0:
+            return str(headings[-1])
+        return str(headings)
+
+    # Fallback to other common attributes
     for key in ["section", "heading", "title"]:
         value = getattr(meta, key, None)
         if value:
             return str(value)
     if isinstance(meta, dict):
+        headings = meta.get("headings")
+        if headings and isinstance(headings, list):
+            return str(headings[-1])
         for key in ["section", "heading", "title"]:
             if meta.get(key):
                 return str(meta[key])
@@ -90,34 +103,50 @@ def _chunk_page(chunk):
     return None
 
 
-def embed_text(client: OpenAI, text: str) -> List[float]:
-    response = client.embeddings.create(model=EMBEDDING_MODEL, input=text)
-    return response.data[0].embedding
+def _build_embed_text(section: str, content: str) -> str:
+    """Prepend section heading to content for richer, context-aware embeddings."""
+    if section and section != "N/A":
+        return f"[Section: {section}]\n{content}"
+    return content
 
 
-def iter_chunk_rows(file_path: Path, chunks: Iterable, openai_client: OpenAI) -> Iterable[Dict]:
+def embed_texts_batch(client: OpenAI, texts: List[str]) -> List[List[float]]:
+    """Embed a list of texts in batches, returning embeddings in the same order."""
+    embeddings: List[List[float]] = []
+    for i in range(0, len(texts), EMBED_BATCH_SIZE):
+        batch = texts[i : i + EMBED_BATCH_SIZE]
+        response = client.embeddings.create(model=EMBEDDING_MODEL, input=batch)
+        batch_embeddings = [item.embedding for item in sorted(response.data, key=lambda x: x.index)]
+        embeddings.extend(batch_embeddings)
+    return embeddings
+
+
+def extract_chunk_records(file_path: Path, chunks) -> List[Dict]:
+    """Extract chunk records (without embeddings) from a file's chunks."""
     filename = file_path.name
+    records: List[Dict] = []
     for index, chunk in enumerate(chunks):
         content = _chunk_text(chunk)
-        if len(content.strip()) < 50:
+        if len(content.strip()) < MIN_CHUNK_LENGTH:
             continue
-
-        yield {
+        section = _chunk_section(chunk)
+        records.append({
             "chunk_id": chunk_id_for(filename, index),
             "filename": filename,
-            "section": _chunk_section(chunk),
+            "section": section,
             "page": _chunk_page(chunk),
             "chunk_index": index,
             "content": content,
-            "embedding": embed_text(openai_client, content),
-        }
+            "_embed_text": _build_embed_text(section, content),
+        })
+    return records
 
 
 def ingest_folder(folder_path: Path) -> None:
     supabase, openai_client = build_clients()
 
     converter = DocumentConverter()
-    chunker = HierarchicalChunker(max_tokens=1000, overlap=100)
+    chunker = HybridChunker(always_emit_headings=True)
 
     files = discover_files(folder_path)
     if not files:
@@ -133,13 +162,20 @@ def ingest_folder(folder_path: Path) -> None:
             document = getattr(conversion_result, "document", conversion_result)
             chunks = chunker.chunk(document)
 
-            rows = list(iter_chunk_rows(file_path, chunks, openai_client))
-            if not rows:
+            records = extract_chunk_records(file_path, chunks)
+            if not records:
                 print("  - No eligible chunks after filtering.")
                 continue
 
-            supabase.table("career_documents").upsert(rows, on_conflict="chunk_id").execute()
-            print(f"  - Upserted {len(rows)} chunks.")
+            # Batch embed all chunks for this file in one pass
+            embed_texts = [r.pop("_embed_text") for r in records]
+            print(f"  - Embedding {len(records)} chunks...")
+            embeddings = embed_texts_batch(openai_client, embed_texts)
+            for record, embedding in zip(records, embeddings):
+                record["embedding"] = embedding
+
+            supabase.table("career_documents").upsert(records, on_conflict="chunk_id").execute()
+            print(f"  - Upserted {len(records)} chunks.")
         except Exception as exc:
             print(f"  - Failed: {exc}")
 

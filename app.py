@@ -10,7 +10,7 @@ from supabase import Client, create_client
 st.set_page_config(page_title="Johan Chen — Career Portfolio", layout="wide", page_icon="🔐")
 
 EMBEDDING_MODEL = "text-embedding-3-small"
-OPENAI_CHAT_MODEL = "openai/gpt-5-mini"
+OPENAI_CHAT_MODEL = "openai/gpt-5.1"
 OPENROUTER_CHAT_MODEL = "openrouter/nvidia/nemotron-3-nano-30b-a3b:free"
 SIMILARITY_THRESHOLD = 0.35
 
@@ -379,13 +379,7 @@ def apply_theme(theme_mode: str) -> None:
             box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1) !important;
         }}
         [data-testid="stChatInput"] button {{
-            background: {accent} !important;
-            border-radius: 8px !important;
-            color: #000000 !important;
-            transition: opacity 0.2s;
-        }}
-        [data-testid="stChatInput"] button:hover {{
-            opacity: 0.8 !important;
+            display: none !important;
         }}
         [data-testid="stChatInput"],
         [data-testid="stBottom"] {{
@@ -484,6 +478,7 @@ SUPABASE_SERVICE_ROLE_KEY = _secret("SUPABASE_SERVICE_ROLE_KEY")
 OPENAI_API_KEY = _secret("OPENAI_API_KEY")
 GROQ_API_KEY = _secret("GROQ_API_KEY")
 LINKEDIN_URL = _secret("LINKEDIN_URL")
+EMAIL_ADDRESS = _secret("EMAIL_ADDRESS")
 OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY", "")
 
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
@@ -562,12 +557,12 @@ def stream_llm_response(model: str, messages: List[Dict[str, str]]):
 
 
 SYSTEM_PROMPT = (
-    "You are a professional representative for Johan Chen, an IT/Cybersecurity Audit expert. "
+    "You are a professional assistant representative for Johan Chen, an IT/Cybersecurity expert. "
     "Answer only using the provided retrieved context. "
     "Do not invent facts or use outside knowledge. "
-    "If the answer is not present in the context, respond politely and ask the user to contact "
-    f"Johan Chen directly via LinkedIn: {LINKEDIN_URL}."
-    "If being asked about contact information, provide email address and LinkedIn URL from the context, but do not share mobile number."
+    "If user is asking about professional certificate, you should refer to CISA, CISSP, CDPSE, and other related certifications."
+    f"If the answer is not present in the context, respond politely and ask the user to contact Johan Chen directly via LinkedIn: {LINKEDIN_URL}."
+    f"If being asked about contact information of Johan Chen, only provide email address {EMAIL_ADDRESS} and LinkedIn URL, do not share mobile number."
 )
 
 
@@ -685,7 +680,7 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
     with st.chat_message("assistant"):
         with st.spinner("Searching knowledge base..."):
             try:
-                raw_chunks, filtered_chunks = retrieve_relevant_chunks(user_input, top_k=3)
+                raw_chunks, filtered_chunks = retrieve_relevant_chunks(user_input, top_k=10)
             except Exception as exc:
                 st.error(f"Retrieval failed: {exc}")
                 st.stop()
@@ -708,7 +703,7 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
         if not raw_chunks:
             fallback = (
                 "I don't have specific information on that - please reach out to Johan directly via "
-                f"LinkedIn: {LINKEDIN_URL}."
+                f"LinkedIn: {LINKEDIN_URL} or email: {EMAIL_ADDRESS}."
             )
             st.markdown(fallback)
             st.session_state.messages.append({"role": "assistant", "content": fallback})

@@ -35,6 +35,7 @@ SUPABASE_SERVICE_ROLE_KEY = "your-supabase-service-role-key"
 OPENAI_API_KEY = "sk-..."
 GROQ_API_KEY = "gsk_..."
 LINKEDIN_URL = "https://www.linkedin.com/in/your-linkedin-id"
+EMAIL_ADDRESS = "you@example.com"
 OPENROUTER_API_KEY = "sk-or-..."  # optional, for OpenRouter models
 ```
 
@@ -57,8 +58,8 @@ Supported formats:
 
 Ingestion behavior:
 - Recursive file scan
-- Docling conversion + hierarchical chunking (`max_tokens=1000`, `overlap=100`)
-- Skips very short chunks (`len(strip) < 50`)
+- Docling conversion + hybrid chunking (`HybridChunker`, ~256 tokens/chunk, `always_emit_headings=True`)
+- Skips very short chunks (`len(strip) < 200`)
 - Embeds with `text-embedding-3-small`
 - Upserts by `chunk_id = sha256(filename + chunk_index)`
 
@@ -70,9 +71,9 @@ streamlit run app.py
 Features:
 - Streaming assistant responses (`st.write_stream` + LiteLLM)
 - Sidebar model switcher:
-  - `openai/gpt-5-mini`
+  - `openai/gpt-5.1`
   - `openrouter/nvidia/nemotron-3-nano-30b-a3b:free`
-- Top-3 retrieval via Supabase RPC
+- Top-15 retrieval via Supabase RPC
 - Similarity filter: discard `< 0.35`
 - Chat memory capped to last 10 turns
 

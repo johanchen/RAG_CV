@@ -17,62 +17,244 @@ SIMILARITY_THRESHOLD = 0.35
 
 def apply_theme(theme_mode: str) -> None:
     if theme_mode == "Dark":
-        bg = "#0E1117"
-        panel = "#161B22"
-        card = "#111827"
-        text = "#E6EDF3"
-        muted = "#9AA4B2"
-        accent = "#22C55E"
-        border = "#2A3441"
+        bg = "#0F1117"
+        card_user = "#23283A"
+        card_assistant = "#181C2A"
+        text = "#F1F5F9"
+        text_secondary = "#CBD5E1"
+        muted = "#94A3B8"
+        accent = "#818CF8"
+        accent_hover = "#A5B4FC"
+        border = "#2D3348"
+        input_bg = "#181C2A"
+        sidebar_bg = "#111422"
+        shadow = "rgba(0, 0, 0, 0.4)"
+        link_color = "#93C5FD"
+        header_gradient = "linear-gradient(135deg, #6366F1 0%, #4F46E5 50%, #7C3AED 100%)"
     else:
-        bg = "#F6F8FB"
-        panel = "#FFFFFF"
-        card = "#F8FAFC"
-        text = "#0F172A"
-        muted = "#475569"
-        accent = "#0EA5E9"
-        border = "#D9E2EC"
+        bg = "#F8FAFC"
+        card_user = "#EEF2FF"
+        card_assistant = "#FFFFFF"
+        text = "#1E293B"
+        text_secondary = "#334155"
+        muted = "#64748B"
+        accent = "#6366F1"
+        accent_hover = "#4F46E5"
+        border = "#E2E8F0"
+        input_bg = "#FFFFFF"
+        sidebar_bg = "#F1F5F9"
+        shadow = "rgba(0, 0, 0, 0.06)"
+        link_color = "#4F46E5"
+        header_gradient = "linear-gradient(135deg, #6366F1 0%, #4F46E5 50%, #7C3AED 100%)"
 
     st.markdown(
         f"""
         <style>
-        :root {{
-            --bg: {bg};
-            --panel: {panel};
-            --card: {card};
-            --text: {text};
-            --muted: {muted};
-            --accent: {accent};
-            --border: {border};
-        }}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        /* ── Base ── */
         .stApp {{
-            background: radial-gradient(80% 120% at 100% 0%, rgba(14,165,233,0.12) 0%, transparent 45%), var(--bg);
-            color: var(--text);
+            background: {bg} !important;
+            color: {text} !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }}
+        .stApp .main .block-container {{
+            color: {text} !important;
+        }}
+
+        /* ── Force ALL text colors ── */
+        .stApp p, .stApp li, .stApp span, .stApp div,
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {{
+            color: {text} !important;
+        }}
+        .stApp a {{
+            color: {link_color} !important;
+        }}
+
+        /* ── Sidebar ── */
+        section[data-testid="stSidebar"] {{
+            background: {sidebar_bg} !important;
+            border-right: 1px solid {border} !important;
+        }}
+        section[data-testid="stSidebar"] * {{
+            color: {text} !important;
+        }}
+        section[data-testid="stSidebar"] [data-testid="stButton"] > button {{
+            background: {accent} !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 0.55rem 1rem;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }}
+        section[data-testid="stSidebar"] [data-testid="stButton"] > button:hover {{
+            background: {accent_hover} !important;
+            transform: translateY(-1px);
+        }}
+
+        /* ── Header card ── */
         .main-title {{
-            padding: 1rem 1.2rem;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: var(--panel);
-            margin-bottom: 1rem;
-            box-shadow: 0 8px 24px rgba(2, 8, 23, 0.08);
+            padding: 1.4rem 1.6rem;
+            border-radius: 16px;
+            background: {header_gradient};
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 24px rgba(99, 102, 241, 0.3);
+            position: relative;
+            overflow: hidden;
+        }}
+        .main-title::before {{
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
         }}
         .main-title h1 {{
             margin: 0;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
+            font-weight: 700;
             line-height: 1.3;
-            color: var(--text);
+            color: #FFFFFF !important;
+            position: relative;
         }}
         .main-title p {{
-            margin: 0.35rem 0 0;
-            color: var(--muted);
+            margin: 0.4rem 0 0;
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 0.9rem;
+            font-weight: 400;
+            position: relative;
+        }}
+
+        /* ── Chat messages ── */
+        [data-testid="stChatMessage"] {{
+            border: 1px solid {border} !important;
+            border-radius: 16px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 0.6rem;
+            box-shadow: 0 2px 8px {shadow};
+            animation: fadeSlideIn 0.3s ease-out;
+        }}
+        @keyframes fadeSlideIn {{
+            from {{ opacity: 0; transform: translateY(8px); }}
+            to   {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        /* User bubble */
+        [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {{
+            background: {card_user} !important;
+        }}
+        /* Assistant bubble */
+        [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {{
+            background: {card_assistant} !important;
+        }}
+
+        /* Force readable text inside ALL chat bubbles */
+        [data-testid="stChatMessage"] p,
+        [data-testid="stChatMessage"] li,
+        [data-testid="stChatMessage"] span,
+        [data-testid="stChatMessage"] div,
+        [data-testid="stChatMessage"] h1,
+        [data-testid="stChatMessage"] h2,
+        [data-testid="stChatMessage"] h3,
+        [data-testid="stChatMessage"] h4,
+        [data-testid="stChatMessage"] strong,
+        [data-testid="stChatMessage"] em {{
+            color: {text} !important;
+        }}
+        [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {{
+            color: {text} !important;
+            line-height: 1.7;
+            font-size: 0.95rem;
+            font-weight: 400;
+        }}
+        [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] li {{
+            color: {text_secondary} !important;
+            line-height: 1.7;
             font-size: 0.95rem;
         }}
-        [data-testid="stChatMessage"] {{
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: var(--card);
+        [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] strong {{
+            color: {text} !important;
+            font-weight: 600;
         }}
+        [data-testid="stChatMessage"] a {{
+            color: {link_color} !important;
+            text-decoration: underline;
+        }}
+
+        /* ── Chat input ── */
+        [data-testid="stChatInput"] textarea {{
+            background: {input_bg} !important;
+            border: 1.5px solid {border} !important;
+            border-radius: 14px !important;
+            color: {text} !important;
+            font-family: 'Inter', sans-serif !important;
+            font-size: 0.95rem !important;
+            padding: 0.8rem 1rem !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }}
+        [data-testid="stChatInput"] textarea::placeholder {{
+            color: {muted} !important;
+        }}
+        [data-testid="stChatInput"] textarea:focus {{
+            border-color: {accent} !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+        }}
+        [data-testid="stChatInput"] button {{
+            background: {accent} !important;
+            border-radius: 10px !important;
+            color: #FFFFFF !important;
+            transition: background 0.2s ease;
+        }}
+        [data-testid="stChatInput"] button:hover {{
+            background: {accent_hover} !important;
+        }}
+        /* Fix the chat input container background */
+        [data-testid="stChatInput"],
+        [data-testid="stBottom"] {{
+            background: {bg} !important;
+        }}
+        [data-testid="stBottom"] > div {{
+            background: {bg} !important;
+        }}
+
+        /* ── Welcome state ── */
+        .welcome-hint {{
+            text-align: center;
+            padding: 3rem 1rem;
+        }}
+        .welcome-hint .icon {{
+            font-size: 2.5rem;
+            margin-bottom: 0.8rem;
+            opacity: 0.5;
+        }}
+        .welcome-hint h3 {{
+            color: {text} !important;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            font-size: 1.1rem;
+        }}
+        .welcome-hint p {{
+            color: {muted} !important;
+            font-size: 0.9rem;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }}
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {{ width: 6px; }}
+        ::-webkit-scrollbar-track {{ background: transparent; }}
+        ::-webkit-scrollbar-thumb {{ background: {border}; border-radius: 3px; }}
+        ::-webkit-scrollbar-thumb:hover {{ background: {muted}; }}
+
+        /* ── Hide Streamlit chrome ── */
+        header[data-testid="stHeader"] {{ background: transparent !important; }}
+        .stDeployButton {{ display: none !important; }}
+        footer {{ display: none !important; }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -163,14 +345,9 @@ def stream_llm_response(model: str, messages: List[Dict[str, str]]):
 
     response = completion(**completion_kwargs)
     for chunk in response:
-        try:
-            yield chunk.choices[0].delta.content or ""
-        except Exception:
-            if isinstance(chunk, dict):
-                delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                yield delta or ""
-            else:
-                yield ""
+        delta = getattr(chunk, "choices", [None])[0]
+        if delta is not None:
+            yield getattr(delta.delta, "content", "") or ""
 
 
 SYSTEM_PROMPT = (
@@ -183,20 +360,21 @@ SYSTEM_PROMPT = (
 
 
 with st.sidebar:
-    st.header("Session")
+    st.markdown("#### Settings")
     theme_mode = st.selectbox("Appearance", options=["Light", "Dark"], index=0)
+    model_choice = st.selectbox(
+        "Response model",
+        options=[OPENAI_CHAT_MODEL, OPENROUTER_CHAT_MODEL],
+        index=0,
+    )
+    show_retrieval_debug = st.checkbox("Show retrieval debug", value=False)
+
+    st.divider()
     if st.button("New Chat", use_container_width=True):
         st.session_state.messages = []
         st.session_state.last_retrieval = []
         st.rerun()
 
-    st.header("Model")
-    model_choice = st.selectbox(
-        "Choose response model",
-        options=[OPENAI_CHAT_MODEL, OPENROUTER_CHAT_MODEL],
-        index=0,
-    )
-    show_retrieval_debug = st.checkbox("Show retrieval debug", value=False)
     st.caption("Responses stream token-by-token via LiteLLM.")
 
 
@@ -209,13 +387,24 @@ apply_theme(theme_mode)
 st.markdown(
     """
     <div class="main-title">
-      <h1>Johan Chen Career Portfolio Assistant</h1>
-      <p>Professional, retrieval-grounded answers based on documented experience.</p>
+      <h1>Johan Chen &mdash; Career Portfolio Assistant</h1>
+      <p>Ask me anything about Johan's experience, certifications, projects, and skills.</p>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
+if not st.session_state.messages:
+    st.markdown(
+        """
+        <div class="welcome-hint">
+          <div class="icon">&#128172;</div>
+          <h3>How can I help you?</h3>
+          <p>Try asking about work experience, technical skills, certifications, or past projects.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -224,7 +413,6 @@ for msg in st.session_state.messages:
 
 if user_input := st.chat_input("Ask about Johan's experience, projects, certifications, and skills..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.messages = trim_messages(st.session_state.messages, max_turns=10)
 
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -234,7 +422,13 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
             st.error("Missing OPENROUTER_API_KEY in .streamlit/secrets.toml for the selected model.")
         st.stop()
 
-    raw_chunks, filtered_chunks = retrieve_relevant_chunks(user_input, top_k=3)
+    try:
+        raw_chunks, filtered_chunks = retrieve_relevant_chunks(user_input, top_k=3)
+    except Exception as exc:
+        with st.chat_message("assistant"):
+            st.error(f"Retrieval failed: {exc}")
+        st.stop()
+
     st.session_state.last_retrieval = raw_chunks
 
     if show_retrieval_debug:
@@ -258,14 +452,14 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
         with st.chat_message("assistant"):
             st.markdown(fallback)
         st.session_state.messages.append({"role": "assistant", "content": fallback})
-        st.session_state.messages = trim_messages(st.session_state.messages, max_turns=10)
     else:
         chunks = filtered_chunks if filtered_chunks else raw_chunks
         context_text = format_context(chunks)
-        prior_messages = trim_messages(st.session_state.messages[:-1], max_turns=10)
 
+        # Build LLM messages from clean history (no RAG context leakage)
+        history = trim_messages(st.session_state.messages[:-1], max_turns=10)
         llm_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        llm_messages.extend(prior_messages)
+        llm_messages.extend(history)
         llm_messages.append(
             {
                 "role": "user",
@@ -280,5 +474,7 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
         with st.chat_message("assistant"):
             full_response = st.write_stream(stream_llm_response(model_choice, llm_messages))
 
+        # Store only the clean response (not the RAG-wrapped prompt)
         st.session_state.messages.append({"role": "assistant", "content": full_response})
-        st.session_state.messages = trim_messages(st.session_state.messages, max_turns=10)
+
+    st.session_state.messages = trim_messages(st.session_state.messages, max_turns=10)

@@ -6,3 +6,8 @@ data/
 local_docs/
 uploads/
 rag_cv/
+__pycache__/
+*.png
+*.jpg
+*.jpeg
+.claude/

@@ -1,34 +1,30 @@
 # RAG Career Portfolio (Streamlit + Supabase + Docling)
 
-Professional streaming RAG assistant for **jctx** (IT/Cybersecurity Audit), using:
+Professional streaming RAG assistant for Johan Chen (IT/Cybersecurity Audit), using:
 - Streamlit chat UI with token streaming
 - Docling multi-format ingestion
 - Supabase + pgvector retrieval
 - OpenAI embeddings (`text-embedding-3-small`)
-- LiteLLM model gateway (OpenAI + Groq)
+- LiteLLM model gateway (OpenAI + OpenRouter)
 
 ## Project Files
-- `app.py` - Streamlit chat app with RAG retrieval + streaming responses.
-- `ingest.py` - Recursive document ingestion and vector upsert.
-- `schema.sql` - Supabase table + pgvector extension + `match_documents` RPC.
-- `requirements.txt` - pinned dependencies.
-- `.streamlit/secrets.toml.example` - secrets template.
+- `app.py` — Streamlit chat app with RAG retrieval + streaming responses
+- `ingest.py` — Document ingestion pipeline with normalisation, deduplication, and vector upsert
+- `schema.sql` — Supabase table, pgvector extension, and `match_documents` RPC
+- `requirements.txt` — Pinned dependencies
+- `.streamlit/secrets.toml.example` — Secrets template
 
 ## 1) Install Dependencies
 ```bash
 pip install -r requirements.txt
+pip install docling        # not pinned in requirements.txt; install separately
 ```
 
 ## 2) Configure Secrets
 This project uses **Streamlit secrets**, not `.env`.
 
-Create this file:
-- `.streamlit/secrets.toml`
+Create `.streamlit/secrets.toml` (copy from `.streamlit/secrets.toml.example`):
 
-You can copy from:
-- `.streamlit/secrets.toml.example`
-
-Required keys:
 ```toml
 SUPABASE_URL = "https://your-project-ref.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY = "your-supabase-service-role-key"
@@ -40,28 +36,33 @@ OPENROUTER_API_KEY = "sk-or-..."  # optional, for OpenRouter models
 ```
 
 ## 3) Initialize Supabase Schema
-Run `schema.sql` in Supabase SQL Editor.
+Run `schema.sql` in the Supabase SQL Editor.
 
-It creates:
-- `career_documents` table
-- `vector` extension
+Creates:
+- `career_documents` table with full metadata schema
+- `ivfflat` vector index
 - `match_documents(query_embedding, match_count)` RPC
 
+**Existing installation?** Uncomment the `ALTER TABLE` migration statements at the bottom of `schema.sql` and run those instead.
+
 ## 4) Ingest Documents
-Put your files in a folder (example: `./docs`) and run:
+Put your files in a folder (e.g. `./docs`) and run:
 ```bash
 python ingest.py ./docs
 ```
 
-Supported formats:
-- `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.md`, `.html`, `.htm`
+Supported formats: `.pdf`, `.docx`, `.xlsx`, `.pptx`, `.txt`, `.md`, `.html`, `.htm`
 
-Ingestion behavior:
-- Recursive file scan
-- Docling conversion + hybrid chunking (`HybridChunker`, ~256 tokens/chunk, `always_emit_headings=True`)
-- Skips very short chunks (`len(strip) < 200`)
-- Embeds with `text-embedding-3-small`
-- Upserts by `chunk_id = sha256(filename + chunk_index)`
+Ingestion pipeline per file:
+1. Docling conversion → text normalisation (unicode, whitespace, OCR artefact removal)
+2. Chunking via `HybridChunker` with per-type token limits (PDF 512, DOCX/HTML/MD 384, PPTX/XLSX 256)
+3. Repeating header/footer lines stripped (appear in ≥ 40 % of chunks)
+4. Near-duplicate chunks removed (`SequenceMatcher` ratio ≥ 0.88)
+5. Language detection via `langdetect`; OCR heuristic flagged for PDFs
+6. Embeddings batched with `text-embedding-3-small`
+7. Upserted by `chunk_id = sha256(filename + chunk_index)`
+
+Re-ingest required after any chunking logic change — delete all rows from `career_documents` first.
 
 ## 5) Run the App
 ```bash
@@ -70,13 +71,13 @@ streamlit run app.py
 
 Features:
 - Streaming assistant responses (`st.write_stream` + LiteLLM)
-- Sidebar model switcher:
-  - `openai/gpt-5.1`
-  - `openrouter/nvidia/nemotron-3-nano-30b-a3b:free`
-- Top-15 retrieval via Supabase RPC
-- Similarity filter: discard `< 0.35`
+- Light / dark theme switcher
+- Sidebar model switcher: `openai/gpt-5.1` or `openrouter/nvidia/nemotron-3-nano-30b-a3b:free`
+- Top-10 retrieval via Supabase RPC, similarity threshold 0.35
+- Section › Subsection breadcrumb in retrieved context
 - Chat memory capped to last 10 turns
+- Retrieval debug panel (toggle in sidebar)
 
 ## Notes
-- If retrieval has no matching context, the app responds with a LinkedIn contact fallback.
-- `.streamlit/secrets.toml`, `.env`, and local doc folders are ignored by `.gitignore`.
+- If retrieval returns no results, the app falls back to a LinkedIn/email contact message.
+- `.streamlit/secrets.toml`, `.env`, and local doc folders are excluded by `.gitignore`.

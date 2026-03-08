@@ -379,7 +379,30 @@ def apply_theme(theme_mode: str) -> None:
             box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1) !important;
         }}
         [data-testid="stChatInput"] button {{
-            display: none !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: {accent} !important;
+            border: none !important;
+            border-radius: 8px !important;
+            color: #000000 !important;
+            width: 34px !important;
+            height: 34px !important;
+            min-width: 34px !important;
+            padding: 0 !important;
+            margin: auto 0.35rem auto 0 !important;
+            cursor: pointer !important;
+            transition: opacity 0.2s ease, transform 0.15s ease !important;
+            flex-shrink: 0 !important;
+        }}
+        [data-testid="stChatInput"] button:hover {{
+            opacity: 0.82 !important;
+            transform: scale(1.08) !important;
+        }}
+        [data-testid="stChatInput"] button svg {{
+            fill: #000000 !important;
+            width: 16px !important;
+            height: 16px !important;
         }}
         [data-testid="stChatInput"],
         [data-testid="stBottom"] {{
@@ -534,8 +557,14 @@ def format_context(chunks: List[Dict]) -> str:
     for row in chunks:
         filename = row.get("filename", "unknown")
         section = row.get("section") or "N/A"
+        subsection = row.get("subsection") or ""
         content = row.get("content", "")
-        blocks.append(f"[Source: {filename}, Section: {section}]\n{content}")
+        # Build a breadcrumb: "Section > Subsection" when they differ
+        if subsection and subsection not in ("N/A", section):
+            location = f"{section} > {subsection}"
+        else:
+            location = section
+        blocks.append(f"[Source: {filename}, Section: {location}]\n{content}")
     return "\n\n".join(blocks)
 
 
@@ -560,7 +589,9 @@ SYSTEM_PROMPT = (
     "You are a professional assistant representative for Johan Chen, an IT/Cybersecurity expert. "
     "Answer only using the provided retrieved context. "
     "Do not invent facts or use outside knowledge. "
+    "Always check the latest information of Johan. For example, between GM and VP, VP is the latest title."
     "If user is asking about professional certificate, you should refer to CISA, CISSP, CDPSE, and other related certifications."
+    "If the user is asking to list down something, your output should be in the table format."
     f"If the answer is not present in the context, respond politely and ask the user to contact Johan Chen directly via LinkedIn: {LINKEDIN_URL}."
     f"If being asked about contact information of Johan Chen, only provide email address {EMAIL_ADDRESS} and LinkedIn URL, do not share mobile number."
 )
@@ -694,9 +725,12 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
                     st.write("No rows returned by match_documents.")
                 else:
                     for row in raw_chunks:
+                        section = row.get("section") or "N/A"
+                        subsection = row.get("subsection") or ""
+                        location = f"{section} > {subsection}" if subsection and subsection not in ("N/A", section) else section
                         st.write(
                             f"- {row.get('filename', 'unknown')} | "
-                            f"{row.get('section') or 'N/A'} | "
+                            f"{location} | "
                             f"similarity={float(row.get('similarity', 0.0)):.4f}"
                         )
 

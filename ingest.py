@@ -38,7 +38,9 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 EMBED_BATCH_SIZE = 100
 
 # Characters; shorter chunks are discarded after normalization.
-MIN_CHUNK_LENGTH = 150
+# Lowered from 150 → 80 to prevent short but critical sections (e.g. Education,
+# Professional Affiliations, Nationality) from being silently dropped.
+MIN_CHUNK_LENGTH = 80
 
 # Max tokens per chunk by document type.
 # - PDF: dense prose → larger chunks preserve more context.

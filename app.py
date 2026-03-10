@@ -11,8 +11,14 @@ st.set_page_config(page_title="Johan Chen — Career Portfolio", layout="wide", 
 
 EMBEDDING_MODEL = "text-embedding-3-small"
 OPENAI_CHAT_MODEL = "openai/gpt-5.1"
-OPENROUTER_CHAT_MODEL = "openrouter/nvidia/nemotron-3-nano-30b-a3b:free"
+OPENROUTER_CHAT_MODEL = "openrouter/arcee-ai/trinity-large-preview:free"
 SIMILARITY_THRESHOLD = 0.35
+
+# Friendly display labels for the model selectbox
+MODEL_LABELS = {
+    OPENAI_CHAT_MODEL:      "GPT-5.1",
+    OPENROUTER_CHAT_MODEL:  "Arcee Trinity",
+}
 
 
 def apply_theme(theme_mode: str) -> None:
@@ -26,7 +32,6 @@ def apply_theme(theme_mode: str) -> None:
         muted = "#4E6280"
         accent = "#22D3EE"
         accent2 = "#F59E0B"
-        accent_hover = "#06B6D4"
         border = "#1A2E47"
         input_bg = "#0C1828"
         sidebar_bg = "#060E1A"
@@ -46,6 +51,9 @@ def apply_theme(theme_mode: str) -> None:
         header_badge_border = "rgba(34, 211, 238, 0.32)"
         header_badge_text = accent
         glow = "rgba(34, 211, 238, 0.08)"
+        toolbar_bg = "rgba(7, 16, 31, 0.92)"
+        select_border = "rgba(34, 211, 238, 0.4)"
+        select_text = "#FFFFFF"
     else:
         bg = "#F2F5FA"
         surface = "#FFFFFF"
@@ -56,7 +64,6 @@ def apply_theme(theme_mode: str) -> None:
         muted = "#7A93AD"
         accent = "#0891B2"
         accent2 = "#D97706"
-        accent_hover = "#0E7490"
         border = "#C8D9E8"
         input_bg = "#FFFFFF"
         sidebar_bg = "#E8EFF8"
@@ -76,6 +83,9 @@ def apply_theme(theme_mode: str) -> None:
         header_badge_border = "rgba(12, 35, 64, 0.5)"
         header_badge_text = "#22D3EE"
         glow = "rgba(8, 145, 178, 0.05)"
+        toolbar_bg = "rgba(242, 245, 250, 0.92)"
+        select_border = "rgba(8, 145, 178, 0.5)"
+        select_text = "#0D1829"
 
     st.markdown(
         f"""
@@ -115,11 +125,16 @@ def apply_theme(theme_mode: str) -> None:
             z-index: 0;
         }}
 
+        /*
+         * ── Block-container ──
+         * padding-top is increased to compensate for the fixed toolbar (≈ 46px + gap).
+         * Without this the header card would render beneath the floating toolbar.
+         */
         .stApp .main .block-container {{
             color: {text} !important;
             position: relative;
             z-index: 1;
-            padding-top: 1.5rem;
+            padding-top: 4rem !important;
             max-width: 880px;
         }}
 
@@ -146,11 +161,6 @@ def apply_theme(theme_mode: str) -> None:
             color: {text} !important;
             font-family: 'Outfit', sans-serif !important;
         }}
-        section[data-testid="stSidebar"] .sidebar-header {{
-            padding: 1.2rem 1rem 1rem;
-            border-bottom: 1px solid {border};
-            margin-bottom: 1.2rem;
-        }}
         section[data-testid="stSidebar"] label {{
             font-size: 0.72rem !important;
             font-weight: 600 !important;
@@ -158,32 +168,125 @@ def apply_theme(theme_mode: str) -> None:
             text-transform: uppercase !important;
             color: {muted} !important;
         }}
-        section[data-testid="stSidebar"] [data-baseweb="select"] > div {{
-            background: {bg} !important;
-            border: 1px solid {border} !important;
-            border-radius: 8px !important;
-            font-size: 0.88rem !important;
-        }}
-        section[data-testid="stSidebar"] [data-testid="stButton"] > button {{
-            background: {accent} !important;
-            color: #000000 !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            font-size: 0.875rem !important;
-            letter-spacing: 0.01em !important;
-            padding: 0.55rem 1rem !important;
-            transition: opacity 0.2s ease, transform 0.15s ease !important;
-            font-family: 'Outfit', sans-serif !important;
-        }}
-        section[data-testid="stSidebar"] [data-testid="stButton"] > button:hover {{
-            opacity: 0.82 !important;
-            transform: translateY(-1px) !important;
-        }}
         section[data-testid="stSidebar"] [data-testid="stCheckbox"] label span {{
             font-size: 0.83rem !important;
             letter-spacing: 0 !important;
             text-transform: none !important;
+        }}
+
+        /* ═══════════════════════════════════════════════════════════════
+         * FIXED TOP-RIGHT TOOLBAR
+         *
+         * How this works:
+         *   apply_theme() calls st.markdown() to inject CSS — that call
+         *   creates the FIRST div child of .block-container (height ≈ 0).
+         *   The st.columns([3,1,1]) toolbar we render next becomes the
+         *   SECOND child.  We target it with nth-child(2) and pin it to
+         *   the viewport top-right with position:fixed + high z-index.
+         *   padding-top on .block-container (above) compensates for the
+         *   space the toolbar no longer occupies in the normal flow.
+         * ═══════════════════════════════════════════════════════════════ */
+
+        /* Pin the toolbar container */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) {{
+            position: fixed !important;
+            top: 0.45rem !important;
+            right: 1.5rem !important;
+            z-index: 999999 !important;
+            width: 210px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: {toolbar_bg} !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border-radius: 10px !important;
+            border: 1px solid {border} !important;
+            box-shadow: 0 2px 12px {shadow} !important;
+        }}
+
+        /* Collapse the inner horizontal block padding / gap */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stHorizontalBlock"] {{
+            gap: 0 !important;
+            padding: 0.2rem 0.25rem !important;
+            align-items: center !important;
+        }}
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stColumn"] {{
+            padding: 0 0.18rem !important;
+            min-width: 0 !important;
+        }}
+
+        /* ── Toolbar: model selectbox ── */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stSelectbox"] > label {{
+            display: none !important;
+        }}
+        /* The select control itself */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-baseweb="select"] > div {{
+            background: transparent !important;
+            border: 1.5px solid {select_border} !important;
+            border-radius: 7px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 0.35rem !important;
+            cursor: pointer !important;
+            transition: border-color 0.15s !important;
+        }}
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-baseweb="select"] > div:hover {{
+            border-color: {accent} !important;
+        }}
+        /* Selected value text */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-baseweb="select"] [role="combobox"] span,
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-baseweb="select"] [role="combobox"] div {{
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.71rem !important;
+            color: {select_text} !important;
+            line-height: 30px !important;
+        }}
+        /* Dropdown chevron */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-baseweb="select"] svg {{
+            color: {muted} !important;
+            width: 14px !important;
+            height: 14px !important;
+        }}
+
+        /* ── Toolbar: icon buttons (theme + new chat) ── */
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button {{
+            background: transparent !important;
+            border: none !important;
+            border-radius: 7px !important;
+            color: {text} !important;
+            font-size: 1.1rem !important;
+            line-height: 1 !important;
+            padding: 0 !important;
+            height: 30px !important;
+            width: 100% !important;
+            min-height: 30px !important;
+            transition: background 0.15s ease !important;
+        }}
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button:hover {{
+            background: {badge_bg} !important;
+        }}
+
+        /* ── Dropdown popup for model selectbox ── */
+        [data-baseweb="popover"] ul[role="listbox"] {{
+            background: {surface} !important;
+            border: 1px solid {border} !important;
+            border-radius: 8px !important;
+            padding: 0.25rem !important;
+        }}
+        [data-baseweb="popover"] li[role="option"] {{
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.75rem !important;
+            color: {text} !important;
+            background: transparent !important;
+            border-radius: 5px !important;
+            padding: 0.35rem 0.6rem !important;
+        }}
+        [data-baseweb="popover"] li[role="option"]:hover {{
+            background: {badge_bg} !important;
+        }}
+        [data-baseweb="popover"] li[role="option"][aria-selected="true"] {{
+            background: {badge_bg} !important;
+            color: {accent} !important;
         }}
 
         /* ── Header card ── */
@@ -191,12 +294,11 @@ def apply_theme(theme_mode: str) -> None:
             padding: 1.6rem 2rem 1.4rem;
             border-radius: 16px;
             background: {header_bg};
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.2rem;
             border: 1px solid {header_border};
             position: relative;
             overflow: hidden;
         }}
-        /* Top accent line */
         .main-title::before {{
             content: '';
             position: absolute;
@@ -204,7 +306,6 @@ def apply_theme(theme_mode: str) -> None:
             height: 2px;
             background: linear-gradient(90deg, transparent 0%, {accent} 40%, {accent2} 70%, transparent 100%);
         }}
-        /* Radial glow top-right */
         .main-title::after {{
             content: '';
             position: absolute;
@@ -222,81 +323,67 @@ def apply_theme(theme_mode: str) -> None:
             z-index: 2;
         }}
         .main-title-badge {{
-            width: 54px;
-            height: 54px;
-            min-width: 54px;
+            width: 54px; height: 54px; min-width: 54px;
             border-radius: 12px;
             background: {header_badge_bg};
             border: 1px solid {header_badge_border};
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             font-family: 'Syne', sans-serif !important;
-            font-weight: 800;
-            font-size: 1rem;
+            font-weight: 800; font-size: 1rem;
             color: {header_badge_text} !important;
-            flex-shrink: 0;
-            letter-spacing: 0.02em;
-            line-height: 1;
+            flex-shrink: 0; letter-spacing: 0.02em; line-height: 1;
         }}
-        /* Ensure badge text is never overridden by global color rules */
         .main-title-badge,
         div.main-title-badge,
         .main-title .main-title-inner .main-title-badge {{
             color: {header_badge_text} !important;
         }}
         .main-title-text {{
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            display: flex; flex-direction: column; justify-content: center;
         }}
         .main-title-text h1 {{
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: 'Syne', sans-serif !important;
-            font-size: 1.22rem !important;
-            font-weight: 700 !important;
+            font-size: 1.22rem !important; font-weight: 700 !important;
             color: {header_title_color} !important;
-            letter-spacing: -0.01em;
-            line-height: 1.25;
+            letter-spacing: -0.01em; line-height: 1.25;
         }}
         .main-title-text p {{
-            margin: 0.28rem 0 0;
-            padding: 0;
+            margin: 0.28rem 0 0; padding: 0;
             color: {header_sub_color} !important;
             font-size: 0.83rem !important;
             font-family: 'Outfit', sans-serif !important;
-            font-weight: 400;
-            letter-spacing: 0.01em;
-            line-height: 1.4;
+            font-weight: 400; letter-spacing: 0.01em; line-height: 1.4;
+        }}
+        .main-title-intro {{
+            margin-top: 1rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid {header_border};
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 0.84rem !important;
+            color: {header_sub_color} !important;
+            line-height: 1.65;
+            position: relative; z-index: 2;
         }}
         .main-title-chips {{
-            display: flex;
-            gap: 0.45rem;
-            margin-top: 1.1rem;
-            position: relative;
-            z-index: 2;
+            display: flex; gap: 0.45rem;
+            margin-top: 1rem;
+            position: relative; z-index: 2;
             flex-wrap: wrap;
         }}
         .chip {{
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.68rem;
-            font-weight: 500;
-            padding: 0.22rem 0.65rem;
-            border-radius: 4px;
+            font-size: 0.68rem; font-weight: 500;
+            padding: 0.22rem 0.65rem; border-radius: 4px;
             letter-spacing: 0.04em;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
+            display: inline-flex; align-items: center; gap: 0.3rem;
         }}
         .chip-cyan {{
-            background: {badge_bg};
-            border: 1px solid {badge_border};
+            background: {badge_bg}; border: 1px solid {badge_border};
             color: {accent} !important;
         }}
         .chip-amber {{
-            background: {rag_chip_bg};
-            border: 1px solid {rag_chip_border};
+            background: {rag_chip_bg}; border: 1px solid {rag_chip_border};
             color: {rag_chip_text} !important;
         }}
 
@@ -312,13 +399,11 @@ def apply_theme(theme_mode: str) -> None:
             from {{ opacity: 0; transform: translateY(8px); }}
             to   {{ opacity: 1; transform: translateY(0); }}
         }}
-        /* User bubble — cyan left border */
         [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {{
             background: {card_user} !important;
             border: 1px solid {border} !important;
             border-left: 3px solid {accent} !important;
         }}
-        /* Assistant bubble — amber left border */
         [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {{
             background: {card_assistant} !important;
             border: 1px solid {border} !important;
@@ -334,31 +419,21 @@ def apply_theme(theme_mode: str) -> None:
             color: {text} !important;
         }}
         [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {{
-            color: {text} !important;
-            line-height: 1.78;
-            font-size: 0.92rem;
-            font-family: 'Outfit', sans-serif;
+            color: {text} !important; line-height: 1.78;
+            font-size: 0.92rem; font-family: 'Outfit', sans-serif;
         }}
         [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] li {{
-            color: {text_secondary} !important;
-            line-height: 1.78;
-            font-size: 0.92rem;
+            color: {text_secondary} !important; line-height: 1.78; font-size: 0.92rem;
         }}
         [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] strong {{
-            color: {text} !important;
-            font-weight: 600;
+            color: {text} !important; font-weight: 600;
         }}
         [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] code {{
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            background: {border} !important;
-            padding: 0.12em 0.45em;
-            border-radius: 4px;
-            color: {accent} !important;
+            font-size: 0.8rem; background: {border} !important;
+            padding: 0.12em 0.45em; border-radius: 4px; color: {accent} !important;
         }}
-        [data-testid="stChatMessage"] a {{
-            color: {link_color} !important;
-        }}
+        [data-testid="stChatMessage"] a {{ color: {link_color} !important; }}
 
         /* ── Chat input ── */
         [data-testid="stChatInput"] textarea {{
@@ -371,98 +446,61 @@ def apply_theme(theme_mode: str) -> None:
             padding: 0.85rem 1.1rem !important;
             transition: border-color 0.2s, box-shadow 0.2s;
         }}
-        [data-testid="stChatInput"] textarea::placeholder {{
-            color: {muted} !important;
-        }}
+        [data-testid="stChatInput"] textarea::placeholder {{ color: {muted} !important; }}
         [data-testid="stChatInput"] textarea:focus {{
             border-color: {accent} !important;
             box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1) !important;
         }}
         [data-testid="stChatInput"] button {{
-            display: flex !important;
-            align-items: center !important;
+            display: flex !important; align-items: center !important;
             justify-content: center !important;
-            background: {accent} !important;
-            border: none !important;
-            border-radius: 8px !important;
-            color: #000000 !important;
-            width: 34px !important;
-            height: 34px !important;
-            min-width: 34px !important;
-            padding: 0 !important;
-            margin: auto 0.35rem auto 0 !important;
-            cursor: pointer !important;
+            background: {accent} !important; border: none !important;
+            border-radius: 8px !important; color: #000000 !important;
+            width: 34px !important; height: 34px !important;
+            min-width: 34px !important; padding: 0 !important;
+            margin: auto 0.35rem auto 0 !important; cursor: pointer !important;
             transition: opacity 0.2s ease, transform 0.15s ease !important;
             flex-shrink: 0 !important;
         }}
         [data-testid="stChatInput"] button:hover {{
-            opacity: 0.82 !important;
-            transform: scale(1.08) !important;
+            opacity: 0.82 !important; transform: scale(1.08) !important;
         }}
         [data-testid="stChatInput"] button svg {{
-            fill: #000000 !important;
-            width: 16px !important;
-            height: 16px !important;
+            fill: #000000 !important; width: 16px !important; height: 16px !important;
         }}
-        [data-testid="stChatInput"],
-        [data-testid="stBottom"] {{
+        [data-testid="stChatInput"], [data-testid="stBottom"] {{
             background: {bg} !important;
         }}
-        [data-testid="stBottom"] > div {{
-            background: {bg} !important;
-        }}
+        [data-testid="stBottom"] > div {{ background: {bg} !important; }}
 
         /* ── Welcome state ── */
         .welcome-wrap {{
-            text-align: center;
-            padding: 3.5rem 1rem 2.5rem;
+            text-align: center; padding: 3.5rem 1rem 2.5rem;
         }}
         .welcome-icon {{
-            width: 62px;
-            height: 62px;
-            margin: 0 auto 1.2rem;
-            border-radius: 16px;
-            background: {badge_bg};
-            border: 1px solid {badge_border};
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.7rem;
+            width: 62px; height: 62px; margin: 0 auto 1.2rem;
+            border-radius: 16px; background: {badge_bg}; border: 1px solid {badge_border};
+            display: flex; align-items: center; justify-content: center; font-size: 1.7rem;
         }}
         .welcome-wrap h3 {{
-            color: {text} !important;
-            font-family: 'Syne', sans-serif !important;
-            font-weight: 700 !important;
-            font-size: 1.08rem !important;
-            margin-bottom: 0.45rem;
-            letter-spacing: -0.01em;
+            color: {text} !important; font-family: 'Syne', sans-serif !important;
+            font-weight: 700 !important; font-size: 1.08rem !important;
+            margin-bottom: 0.45rem; letter-spacing: -0.01em;
         }}
         .welcome-wrap p {{
-            color: {muted} !important;
-            font-size: 0.87rem !important;
-            max-width: 370px;
-            margin: 0 auto;
-            line-height: 1.65;
+            color: {muted} !important; font-size: 0.87rem !important;
+            max-width: 370px; margin: 0 auto; line-height: 1.65;
             font-family: 'Outfit', sans-serif !important;
         }}
         .suggestion-pills {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.45rem;
-            justify-content: center;
-            margin-top: 1.4rem;
-            max-width: 480px;
-            margin-left: auto;
-            margin-right: auto;
+            display: flex; flex-wrap: wrap; gap: 0.45rem;
+            justify-content: center; margin-top: 1.4rem;
+            max-width: 480px; margin-left: auto; margin-right: auto;
         }}
         .pill {{
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.79rem;
-            color: {text_secondary} !important;
-            background: {surface};
-            border: 1px solid {border};
-            border-radius: 20px;
-            padding: 0.32rem 0.75rem;
+            font-family: 'Outfit', sans-serif; font-size: 0.79rem;
+            color: {text_secondary} !important; background: {surface};
+            border: 1px solid {border}; border-radius: 20px; padding: 0.32rem 0.75rem;
         }}
 
         /* ── Scrollbar ── */
@@ -473,8 +511,7 @@ def apply_theme(theme_mode: str) -> None:
 
         /* ── Caption / footer text ── */
         .stApp .stCaption, .stApp .stCaption * {{
-            color: {muted} !important;
-            font-size: 0.76rem !important;
+            color: {muted} !important; font-size: 0.76rem !important;
             font-family: 'JetBrains Mono', monospace !important;
         }}
 
@@ -533,18 +570,13 @@ def embed_text(text: str) -> List[float]:
 def retrieve_relevant_chunks(query: str, top_k: int = 3) -> Tuple[List[Dict], List[Dict]]:
     query_embedding = embed_text(query)
     supabase = get_supabase_client()
-
     response = (
         supabase.rpc(
             "match_documents",
-            {
-                "query_embedding": query_embedding,
-                "match_count": top_k,
-            },
+            {"query_embedding": query_embedding, "match_count": top_k},
         )
         .execute()
     )
-
     raw_rows = response.data or []
     filtered_rows = [
         row for row in raw_rows if float(row.get("similarity", 0.0)) >= SIMILARITY_THRESHOLD
@@ -559,7 +591,6 @@ def format_context(chunks: List[Dict]) -> str:
         section = row.get("section") or "N/A"
         subsection = row.get("subsection") or ""
         content = row.get("content", "")
-        # Build a breadcrumb: "Section > Subsection" when they differ
         if subsection and subsection not in ("N/A", section):
             location = f"{section} > {subsection}"
         else:
@@ -569,15 +600,9 @@ def format_context(chunks: List[Dict]) -> str:
 
 
 def stream_llm_response(model: str, messages: List[Dict[str, str]]):
-    completion_kwargs = {
-        "model": model,
-        "messages": messages,
-        "stream": True,
-    }
-    # Some models (for example gpt-5-mini) only allow default temperature.
+    completion_kwargs = {"model": model, "messages": messages, "stream": True}
     if not model.startswith("openai/gpt-5"):
         completion_kwargs["temperature"] = 0.2
-
     response = completion(**completion_kwargs)
     for chunk in response:
         delta = getattr(chunk, "choices", [None])[0]
@@ -597,58 +622,70 @@ SYSTEM_PROMPT = (
 )
 
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown(
-        """
-        <div style="padding: 0.4rem 0 1.1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.2rem;">
-          <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.63rem; letter-spacing: 0.1em;
-                      text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem;">
-            Portfolio AI
-          </div>
-          <div style="font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.97rem;
-                      letter-spacing: -0.01em; color: var(--text);">
-            Johan Chen
-          </div>
-          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; font-family: 'Outfit', sans-serif;">
-            IT &amp; Cybersecurity Audit
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        "<div style='font-size:0.72rem; font-weight:600; letter-spacing:0.09em; "
-        "text-transform:uppercase; color:var(--muted); margin-bottom:0.5rem;'>Settings</div>",
-        unsafe_allow_html=True,
-    )
-    theme_mode = st.selectbox("Appearance", options=["Light", "Dark"], index=0)
-    model_choice = st.selectbox(
-        "Response model",
-        options=[OPENAI_CHAT_MODEL, OPENROUTER_CHAT_MODEL],
-        index=0,
-    )
-    show_retrieval_debug = st.checkbox("Show retrieval debug", value=False)
-
-    st.divider()
-    if st.button("New Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.last_retrieval = []
-        st.rerun()
-
-    st.caption("Streams token-by-token via LiteLLM.")
-
-
-# ── Session state ─────────────────────────────────────────────────────────────
+# ── Session state ──────────────────────────────────────────────────────────────
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = "Dark"
+if "model_choice" not in st.session_state:
+    st.session_state.model_choice = OPENAI_CHAT_MODEL
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_retrieval" not in st.session_state:
     st.session_state.last_retrieval = []
 
+theme_mode = st.session_state.theme_mode
+
+# ── Apply theme  ───────────────────────────────────────────────────────────────
+# NOTE: this st.markdown call is the FIRST child of .block-container.
+# The toolbar columns below become the SECOND child, which is what the
+# nth-child(2) CSS rule above targets for position:fixed.
 apply_theme(theme_mode)
 
-# ── Header ────────────────────────────────────────────────────────────────────
+# ── Sidebar (debug only) ───────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown(
+        "<div style='padding: 0.8rem 0 0.6rem; font-family: JetBrains Mono, monospace; "
+        "font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; "
+        "color: var(--muted); border-bottom: 1px solid var(--border); margin-bottom: 1rem;'>"
+        "Debug</div>",
+        unsafe_allow_html=True,
+    )
+    show_retrieval_debug = st.checkbox("Show retrieval debug", value=False)
+
+# ── Fixed top-right toolbar: [Model ▾] [☀/🌙] [✏] ────────────────────────────
+# This is the SECOND child of .block-container — pinned via nth-child(2) CSS above.
+_col_model, _col_theme, _col_newchat = st.columns([3, 1, 1])
+
+with _col_model:
+    _model_options = list(MODEL_LABELS.keys())
+    _current_idx = (
+        _model_options.index(st.session_state.model_choice)
+        if st.session_state.model_choice in _model_options else 0
+    )
+    _selected = st.selectbox(
+        "Model",
+        options=_model_options,
+        format_func=lambda x: MODEL_LABELS[x],
+        index=_current_idx,
+        label_visibility="collapsed",
+        key="model_select",
+    )
+    st.session_state.model_choice = _selected
+    model_choice = _selected
+
+with _col_theme:
+    _theme_icon = "☀️" if theme_mode == "Dark" else "🌙"
+    if st.button(_theme_icon, key="theme_toggle", help="Toggle light/dark mode",
+                 use_container_width=True):
+        st.session_state.theme_mode = "Light" if theme_mode == "Dark" else "Dark"
+        st.rerun()
+
+with _col_newchat:
+    if st.button("✏️", key="new_chat_top", help="New chat", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.last_retrieval = []
+        st.rerun()
+
+# ── Header card ────────────────────────────────────────────────────────────────
 st.markdown(
     """
     <div class="main-title">
@@ -658,6 +695,10 @@ st.markdown(
           <h1>Johan Chen</h1>
           <p>IT &amp; Cybersecurity Audit Expert &mdash; Career Portfolio Assistant</p>
         </div>
+      </div>
+      <div class="main-title-intro">
+        This AI assistant answers questions about Johan's professional background using his actual career documents.
+        Ask about his work history, certifications (CISA, CISSP, CDPSE), technical skills, audit methodology, or past projects.
       </div>
       <div class="main-title-chips">
         <span class="chip chip-cyan">&#9632; RAG-Powered</span>
@@ -694,7 +735,6 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-
 # ── Chat input ────────────────────────────────────────────────────────────────
 if user_input := st.chat_input("Ask about Johan's experience, projects, certifications, and skills..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -707,7 +747,6 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
             st.error("Missing OPENROUTER_API_KEY in .streamlit/secrets.toml for the selected model.")
         st.stop()
 
-    # Open the assistant bubble immediately so the user sees activity right away
     with st.chat_message("assistant"):
         with st.spinner("Searching knowledge base..."):
             try:
@@ -727,7 +766,11 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
                     for row in raw_chunks:
                         section = row.get("section") or "N/A"
                         subsection = row.get("subsection") or ""
-                        location = f"{section} > {subsection}" if subsection and subsection not in ("N/A", section) else section
+                        location = (
+                            f"{section} > {subsection}"
+                            if subsection and subsection not in ("N/A", section)
+                            else section
+                        )
                         st.write(
                             f"- {row.get('filename', 'unknown')} | "
                             f"{location} | "
@@ -745,7 +788,6 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
             chunks = filtered_chunks if filtered_chunks else raw_chunks
             context_text = format_context(chunks)
 
-            # Build LLM messages from clean history (no RAG context leakage)
             history = trim_messages(st.session_state.messages[:-1], max_turns=10)
             llm_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
             llm_messages.extend(history)
@@ -761,7 +803,6 @@ if user_input := st.chat_input("Ask about Johan's experience, projects, certific
             )
 
             full_response = st.write_stream(stream_llm_response(model_choice, llm_messages))
-            # Store only the clean response (not the RAG-wrapped prompt)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
 
     st.session_state.messages = trim_messages(st.session_state.messages, max_turns=10)

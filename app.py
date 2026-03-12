@@ -134,7 +134,7 @@ def apply_theme(theme_mode: str) -> None:
             color: {text} !important;
             position: relative;
             z-index: 1;
-            padding-top: 4rem !important;
+            padding-top: 1.2rem !important;
             max-width: 880px;
         }}
 
@@ -187,10 +187,10 @@ def apply_theme(theme_mode: str) -> None:
          *   space the toolbar no longer occupies in the normal flow.
          * ═══════════════════════════════════════════════════════════════ */
 
-        /* Pin the toolbar container */
+        /* Pin the toolbar container — bottom-right, floating above chat input */
         .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) {{
             position: fixed !important;
-            top: 0.45rem !important;
+            bottom: 88px !important;
             right: 1.5rem !important;
             z-index: 999999 !important;
             width: 210px !important;
@@ -252,6 +252,9 @@ def apply_theme(theme_mode: str) -> None:
         .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button {{
             background: transparent !important;
             border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            -webkit-tap-highlight-color: transparent !important;
             border-radius: 7px !important;
             color: {text} !important;
             font-size: 1.1rem !important;
@@ -265,28 +268,35 @@ def apply_theme(theme_mode: str) -> None:
         .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button:hover {{
             background: {badge_bg} !important;
         }}
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button:focus,
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button:focus-visible,
+        .stApp .main .block-container > div:has(> [data-testid="stHorizontalBlock"]) [data-testid="stButton"] > button:active {{
+            outline: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+        }}
 
         /* ── Dropdown popup for model selectbox ── */
         [data-baseweb="popover"] ul[role="listbox"] {{
-            background: {surface} !important;
-            border: 1px solid {border} !important;
+            background: #FFFFFF !important;
+            border: 1px solid #C8D9E8 !important;
             border-radius: 8px !important;
             padding: 0.25rem !important;
         }}
         [data-baseweb="popover"] li[role="option"] {{
             font-family: 'JetBrains Mono', monospace !important;
             font-size: 0.75rem !important;
-            color: {text} !important;
+            color: #0D1829 !important;
             background: transparent !important;
             border-radius: 5px !important;
             padding: 0.35rem 0.6rem !important;
         }}
         [data-baseweb="popover"] li[role="option"]:hover {{
-            background: {badge_bg} !important;
+            background: rgba(8, 145, 178, 0.10) !important;
         }}
         [data-baseweb="popover"] li[role="option"][aria-selected="true"] {{
-            background: {badge_bg} !important;
-            color: {accent} !important;
+            background: rgba(8, 145, 178, 0.12) !important;
+            color: #0891B2 !important;
         }}
 
         /* ── Header card ── */
